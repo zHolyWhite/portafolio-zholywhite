@@ -1,0 +1,30 @@
+---
+import About from '../components/About.astro';
+import Background from '../components/Background.astro';
+import DiscordPresence from '../components/DiscordPresence.astro';
+import GithubStats from '../components/GithubStats.astro';
+import Profile from '../components/Profile.astro';
+import Projects from '../components/Projects.astro';
+import TechStack from '../components/TechStack.astro';
+import MainLayout from '../layouts/MainLayout.astro';
+---
+
+<MainLayout>
+  <Background />
+
+  <main class="portfolio-page">
+    <section class="portfolio-layout">
+      <section class="portfolio-layout__profile">
+        <Profile />
+        <GithubStats />
+        <DiscordPresence />
+      </section>
+
+      <TechStack />
+    </section>
+
+    <About />
+    
+    <Projects />
+  </main>
+</MainLayout>

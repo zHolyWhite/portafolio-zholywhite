@@ -1,0 +1,41 @@
+---
+import TechGroup from './TechGroup.astro';
+import { techStack } from '../data/tech-stack';
+---
+
+<section class="tech-stack" aria-labelledby="stack-title">
+  <div class="tech-stack__header">
+    <span class="tech-stack__eyebrow font-manrope">
+      Tecnologías
+    </span>
+
+    <h2 id="stack-title" class="tech-stack__title font-manrope">
+      Tech Stack
+    </h2>
+  </div>
+
+  <TechGroup
+    title="Lenguajes"
+    technologies={techStack.lenguajes}
+  />
+
+  <TechGroup
+    title="Frameworks"
+    technologies={techStack.frameworks}
+  />
+
+  <TechGroup
+    title="Minecraft"
+    technologies={techStack.minecraft}
+  />
+
+  <TechGroup
+    title="Herramientas"
+    technologies={techStack.herramientas}
+  />
+
+  <TechGroup
+    title="Otros"
+    technologies={techStack.otros}
+  />
+</section>

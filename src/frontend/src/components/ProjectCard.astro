@@ -1,0 +1,65 @@
+---
+interface Props {
+  titulo: string;
+  descripcion: string;
+  stack: string[];
+  github: string;
+  demo?: string;
+  portada?: string;
+}
+
+const { titulo, descripcion, stack, github, demo, portada } = Astro.props;
+---
+
+<article class="project-card">
+  {portada && (
+    <div class="project-card__cover">
+      <img
+        src={portada}
+        alt={`Portada de ${titulo}`}
+        class="project-card__cover-image"
+        loading="lazy"
+      />
+    </div>
+  )}
+  
+  <div class="project-card__content">
+    <h4 class="project-card__title font-manrope">
+      {titulo}
+    </h4>
+    
+    <p class="project-card__description">
+      {descripcion}
+    </p>
+    
+    <div class="project-card__stack">
+      {stack.map((tech) => (
+        <span class="project-card__tech">
+          {tech}
+        </span>
+      ))}
+    </div>
+    
+    <div class="project-card__links">
+      <a 
+        href={github} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        class="project-card__link"
+      >
+        GitHub →
+      </a>
+      
+      {demo && (
+        <a 
+          href={demo} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          class="project-card__link"
+        >
+          Demo →
+        </a>
+      )}
+    </div>
+  </div>
+</article>

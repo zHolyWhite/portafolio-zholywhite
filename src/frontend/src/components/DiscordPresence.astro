@@ -1,0 +1,577 @@
+<section
+  class="discord-presence"
+  aria-label="Discord Rich Presence"
+  data-discord-presence
+>
+  <div class="discord-presence__header">
+    <span class="discord-presence__title font-manrope">
+      User: justdev.white
+    </span>
+
+    <span
+      class="discord-presence__connection"
+      data-discord-connection
+    >
+      Conectandoxd
+    </span>
+  </div>
+
+  <div class="discord-presence__content" data-discord-content>
+    <div class="discord-presence__artwork">
+      <img
+        src="https://placehold.co/144x144/202225/ffffff?text=Discord"
+        alt="Actividad de Discord"
+        class="discord-presence__large-image"
+        data-discord-large-image
+      />
+
+      <img
+        src="https://placehold.co/54x54/5865f2/ffffff?text=D"
+        alt="Icono secundario de Discord"
+        class="discord-presence__small-image"
+        data-discord-small-image
+      />
+    </div>
+
+    <div class="discord-presence__details">
+      <span
+        class="discord-presence__activity-type"
+        data-discord-type
+      >
+        Discord
+      </span>
+
+      <strong
+        class="discord-presence__activity font-manrope"
+        data-discord-name
+      >
+        Sin actividad
+      </strong>
+
+      <span
+        class="discord-presence__detail"
+        data-discord-details
+      >
+        —
+      </span>
+
+      <span
+        class="discord-presence__state"
+        data-discord-state
+      >
+        —
+      </span>
+
+      <div class="discord-presence__metadata">
+        <span
+          class="discord-presence__timer"
+          data-discord-timer
+        >
+          —
+        </span>
+
+        <span
+          class="discord-presence__party"
+          data-discord-party
+        ></span>
+      </div>
+    </div>
+  </div>
+
+  <div
+    class="discord-presence__buttons"
+    data-discord-buttons
+  ></div>
+</section>
+
+<script>
+  type DiscordAsset = {
+    large_image?: string;
+    large_text?: string;
+    small_image?: string;
+    small_text?: string;
+  };
+
+  type DiscordActivity = {
+    name?: string;
+    type?: number;
+    details?: string;
+    state?: string;
+    timestamps?: {
+      start?: number;
+      end?: number;
+    };
+    assets?: DiscordAsset;
+    party?: {
+      id?: string;
+      size?: [number, number];
+    };
+    buttons?: string[];
+    metadata?: {
+      button_urls?: string[];
+    };
+  };
+
+  type LanyardPresence = {
+    discord_status?: string;
+    activities?: DiscordActivity[];
+  };
+
+  type LanyardHelloPayload = {
+    heartbeat_interval?: number;
+  };
+
+  type LanyardMessage = {
+    op: number;
+    t?: string;
+    d?: LanyardPresence | LanyardHelloPayload;
+  };
+
+  const discordUserId = import.meta.env.PUBLIC_DISCORD_USER_ID;
+
+  const connectionElement = document.querySelector<HTMLElement>(
+    '[data-discord-connection]',
+  );
+
+  const largeImageElement = document.querySelector<HTMLImageElement>(
+    '[data-discord-large-image]',
+  );
+
+  const smallImageElement = document.querySelector<HTMLImageElement>(
+    '[data-discord-small-image]',
+  );
+
+  const typeElement = document.querySelector<HTMLElement>(
+    '[data-discord-type]',
+  );
+
+  const nameElement = document.querySelector<HTMLElement>(
+    '[data-discord-name]',
+  );
+
+  const detailsElement = document.querySelector<HTMLElement>(
+    '[data-discord-details]',
+  );
+
+  const stateElement = document.querySelector<HTMLElement>(
+    '[data-discord-state]',
+  );
+
+  const timerElement = document.querySelector<HTMLElement>(
+    '[data-discord-timer]',
+  );
+
+  const partyElement = document.querySelector<HTMLElement>(
+    '[data-discord-party]',
+  );
+
+  const buttonsElement = document.querySelector<HTMLElement>(
+    '[data-discord-buttons]',
+  );
+
+  let currentStartTimestamp: number | undefined;
+  let currentEndTimestamp: number | undefined;
+  let elapsedTimer: number | undefined;
+  let heartbeatTimer: number | undefined;
+  let reconnectTimer: number | undefined;
+  let socket: WebSocket | undefined;
+  let reconnectAttempts = 0;
+
+  const activityTypes: Record<number, string> = {
+    0: 'Jugando',
+    1: 'Transmitiendo',
+    2: 'Escuchando',
+    3: 'Viendo',
+    4: 'Actividad personalizada',
+    5: 'Compitiendo',
+  };
+
+  function setText(
+    element: HTMLElement | null,
+    value: string,
+  ) {
+    if (element) {
+      element.textContent = value;
+    }
+  }
+
+  function isLanyardPresence(
+    value: LanyardMessage['d'],
+  ): value is LanyardPresence {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      'activities' in value
+    );
+  }
+
+  function isLanyardHelloPayload(
+    value: LanyardMessage['d'],
+  ): value is LanyardHelloPayload {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      'heartbeat_interval' in value
+    );
+  }
+
+  function getExternalAssetUrl(
+    asset: string | undefined,
+  ): string | null {
+    if (!asset) {
+      return null;
+    }
+
+    if (
+      asset.startsWith('http://') ||
+      asset.startsWith('https://')
+    ) {
+      return asset;
+    }
+
+    if (asset.startsWith('mp:')) {
+      return `https://media.discordapp.net/${asset.slice(3)}`;
+    }
+
+    if (asset.startsWith('spotify:')) {
+      return `https://i.scdn.co/image/${asset.slice(8)}`;
+    }
+
+    return null;
+  }
+
+  function formatDuration(milliseconds: number) {
+    const totalSeconds = Math.max(
+      0,
+      Math.floor(milliseconds / 1000),
+    );
+
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    return [hours, minutes, seconds]
+      .map((value) => String(value).padStart(2, '0'))
+      .join(':');
+  }
+
+  function updateTimer() {
+    if (!timerElement) {
+      return;
+    }
+
+    if (currentEndTimestamp) {
+      const remaining = Math.max(
+        0,
+        currentEndTimestamp - Date.now(),
+      );
+
+      timerElement.textContent = `Termina en ${formatDuration(remaining)}`;
+      return;
+    }
+
+    if (currentStartTimestamp) {
+      const elapsed = Math.max(
+        0,
+        Date.now() - currentStartTimestamp,
+      );
+
+      timerElement.textContent = formatDuration(elapsed);
+      return;
+    }
+
+    timerElement.textContent = 'Sin temporizador';
+  }
+
+  function renderButtons(activity: DiscordActivity) {
+    if (!buttonsElement) {
+      return;
+    }
+
+    buttonsElement.replaceChildren();
+
+    const labels = activity.buttons ?? [];
+    const urls = activity.metadata?.button_urls ?? [];
+
+    labels.forEach((label, index) => {
+      const url = urls[index];
+
+      if (!url) {
+        return;
+      }
+
+      const button = document.createElement('a');
+
+      button.className = 'discord-presence__button';
+      button.href = url;
+      button.target = '_blank';
+      button.rel = 'noopener noreferrer';
+      button.textContent = label;
+
+      buttonsElement.appendChild(button);
+    });
+  }
+
+  function resetActivityAssets() {
+    if (largeImageElement) {
+      largeImageElement.src =
+        'https://placehold.co/144x144/202225/ffffff?text=Discord';
+      largeImageElement.alt = 'Sin actividad de Discord';
+    }
+
+    if (smallImageElement) {
+      smallImageElement.hidden = true;
+      smallImageElement.removeAttribute('src');
+      smallImageElement.alt = '';
+    }
+  }
+
+  function renderOffline() {
+    currentStartTimestamp = undefined;
+    currentEndTimestamp = undefined;
+
+    setText(connectionElement, 'Sin conexión');
+    setText(typeElement, 'Discord');
+    setText(nameElement, 'Sin actividad');
+    setText(detailsElement, 'No hay actividad pública');
+    setText(stateElement, '—');
+    setText(timerElement, '—');
+    setText(partyElement, '');
+
+    resetActivityAssets();
+    buttonsElement?.replaceChildren();
+  }
+
+  function renderPresence(presence: LanyardPresence) {
+    const activities = presence.activities ?? [];
+
+    const activity =
+      activities.find((item) => item.type !== 4) ??
+      activities.find((item) => item.type === 4);
+
+    const statusLabels: Record<string, string> = {
+      online: 'En línea',
+      idle: 'Ausente',
+      dnd: 'No molestar',
+      offline: 'Desconectado',
+    };
+
+    setText(
+      connectionElement,
+      statusLabels[presence.discord_status ?? 'offline'] ??
+        'Desconectado',
+    );
+
+    if (!activity) {
+      currentStartTimestamp = undefined;
+      currentEndTimestamp = undefined;
+
+      setText(typeElement, 'Discord');
+      setText(nameElement, 'Sin actividad');
+      setText(detailsElement, 'No hay actividad pública');
+      setText(stateElement, '—');
+      setText(timerElement, '—');
+      setText(partyElement, '');
+
+      resetActivityAssets();
+      buttonsElement?.replaceChildren();
+
+      return;
+    }
+
+    const assets = activity.assets ?? {};
+    const largeImageUrl = getExternalAssetUrl(assets.large_image);
+    const smallImageUrl = getExternalAssetUrl(assets.small_image);
+
+    setText(
+      typeElement,
+      activityTypes[activity.type ?? 0] ?? 'Actividad',
+    );
+
+    setText(nameElement, activity.name ?? 'Actividad de Discord');
+    setText(detailsElement, activity.details ?? 'Sin detalles');
+    setText(stateElement, activity.state ?? 'Sin estado');
+
+    currentStartTimestamp = activity.timestamps?.start;
+    currentEndTimestamp = activity.timestamps?.end;
+
+    if (largeImageElement) {
+      if (largeImageUrl) {
+        largeImageElement.src = largeImageUrl;
+        largeImageElement.alt =
+          assets.large_text ??
+          activity.name ??
+          'Actividad de Discord';
+      } else {
+        largeImageElement.src =
+          'https://placehold.co/144x144/202225/ffffff?text=Activity';
+        largeImageElement.alt =
+          activity.name ?? 'Actividad de Discord';
+      }
+    }
+
+    if (smallImageElement) {
+      if (smallImageUrl) {
+        smallImageElement.hidden = false;
+        smallImageElement.src = smallImageUrl;
+        smallImageElement.alt =
+          assets.small_text ?? 'Icono de actividad';
+      } else {
+        smallImageElement.hidden = true;
+        smallImageElement.removeAttribute('src');
+        smallImageElement.alt = '';
+      }
+    }
+
+    if (partyElement && activity.party?.size) {
+      const [current, max] = activity.party.size;
+      partyElement.textContent = `${current}/${max}`;
+    } else {
+      setText(partyElement, '');
+    }
+
+    renderButtons(activity);
+    updateTimer();
+  }
+
+  async function loadInitialPresence() {
+    if (!discordUserId) {
+      renderOffline();
+      setText(connectionElement, 'Falta User ID');
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.lanyard.rest/v1/users/${discordUserId}`,
+      );
+
+      if (!response.ok) {
+        throw new Error('No se pudo cargar la presencia');
+      }
+
+      const payload = await response.json();
+
+      if (payload?.data) {
+        renderPresence(payload.data as LanyardPresence);
+      }
+    } catch (error) {
+      console.error('Error al cargar Discord:', error);
+      renderOffline();
+    }
+  }
+
+  function clearSocketTimers() {
+    if (heartbeatTimer) {
+      window.clearInterval(heartbeatTimer);
+      heartbeatTimer = undefined;
+    }
+
+    if (reconnectTimer) {
+      window.clearTimeout(reconnectTimer);
+      reconnectTimer = undefined;
+    }
+  }
+
+  function scheduleReconnect() {
+    clearSocketTimers();
+
+    const delay = Math.min(
+      5000 * Math.max(1, reconnectAttempts),
+      30000,
+    );
+
+    reconnectAttempts += 1;
+
+    setText(connectionElement, 'Reconectando');
+
+    reconnectTimer = window.setTimeout(() => {
+      connectToLanyard();
+    }, delay);
+  }
+
+  function connectToLanyard() {
+    if (!discordUserId) {
+      return;
+    }
+
+    if (
+      socket &&
+      (socket.readyState === WebSocket.OPEN ||
+        socket.readyState === WebSocket.CONNECTING)
+    ) {
+      return;
+    }
+
+    socket = new WebSocket('wss://api.lanyard.rest/socket');
+
+    socket.addEventListener('open', () => {
+      reconnectAttempts = 0;
+      setText(connectionElement, 'Conectado');
+    });
+
+    socket.addEventListener('message', (event) => {
+      const message = JSON.parse(event.data) as LanyardMessage;
+      if (message.op === 1 && isLanyardHelloPayload(message.d)) {
+        const heartbeatInterval =
+          message.d.heartbeat_interval ?? 30000;
+
+        socket?.send(
+          JSON.stringify({
+            op: 2,
+            d: {
+              subscribe_to_id: discordUserId,
+            },
+          }),
+        );
+
+        heartbeatTimer = window.setInterval(() => {
+          if (socket?.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ op: 3 }));
+          }
+        }, heartbeatInterval);
+
+        return;
+      }
+      if (
+        message.op === 0 &&
+        message.t === 'INIT_STATE' &&
+        isLanyardPresence(message.d)
+      ) {
+        renderPresence(message.d);
+        return;
+      }
+      if (
+        message.op === 0 &&
+        message.t === 'PRESENCE_UPDATE' &&
+        isLanyardPresence(message.d)
+      ) {
+        renderPresence(message.d);
+      }
+    });
+
+    socket.addEventListener('close', () => {
+      socket = undefined;
+      scheduleReconnect();
+    });
+
+    socket.addEventListener('error', () => {
+      setText(connectionElement, 'Sin conexión');
+    });
+  }
+
+  loadInitialPresence();
+  connectToLanyard();
+
+  elapsedTimer = window.setInterval(updateTimer, 1000);
+
+  window.addEventListener('beforeunload', () => {
+    clearSocketTimers();
+
+    if (elapsedTimer) {
+      window.clearInterval(elapsedTimer);
+    }
+
+    socket?.close();
+  });
+</script>

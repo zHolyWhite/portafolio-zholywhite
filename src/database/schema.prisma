@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id              String   @id @default(cuid())
+  titulo          String
+  descripcion     String
+  descripcionLarga String?
+  stack           String[]
+  github          String?
+  modrinth        String?
+  demo            String?
+  portada         String?
+  video           String?
+  destacado       Boolean  @default(false)
+  categoria       String   @default("personal") // "personal" o "minecraft"
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model UploadToken {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  discordId   String
+  ipAddress   String
+  used        Boolean  @default(false)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+}
+
+model User {
+  id          String   @id @default(cuid())
+  discordId   String   @unique
+  username    String
+  avatarUrl   String?
+  lastIp      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

@@ -1,0 +1,34 @@
+---
+import ProjectCard from './ProjectCard.astro';
+import { proyectosPersonales, proyectosMinecraft } from '../data/projects';
+---
+
+<section class="projects">
+  <h2 class="projects__title font-minecraft">
+    Mis Proyectos
+  </h2>
+  
+  <!-- Proyectos Personales -->
+  <div class="projects__category">
+    <h3 class="projects__category-title projects__category-title--blue">
+      Proyectos Personales
+    </h3>
+    <div class="projects__grid">
+      {proyectosPersonales.map((proyecto) => (
+        <ProjectCard {...proyecto} />
+      ))}
+    </div>
+  </div>
+  
+  <!-- Proyectos Minecraft & Comisiones -->
+  <div class="projects__category">
+    <h3 class="projects__category-title projects__category-title--purple">
+      Proyectos Minecraft & Comisiones
+    </h3>
+    <div class="projects__grid">
+      {proyectosMinecraft.map((proyecto) => (
+        <ProjectCard {...proyecto} />
+      ))}
+    </div>
+  </div>
+</section>

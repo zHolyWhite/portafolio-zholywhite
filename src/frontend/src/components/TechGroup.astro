@@ -1,0 +1,30 @@
+---
+import type { Tech } from '../data/tech-stack';
+import { getBadgeUrl } from '../data/tech-stack';
+
+interface Props {
+  title: string;
+  technologies: Tech[];
+}
+
+const { title, technologies } = Astro.props;
+---
+
+<section class="tech-group">
+  <h3 class="tech-group__title font-manrope">
+    {title}
+  </h3>
+
+  <div class="tech-group__badges">
+    {
+      technologies.map((tech) => (
+        <img
+          src={getBadgeUrl(tech)}
+          alt={tech.name}
+          class="tech-group__badge"
+          loading="lazy"
+        />
+      ))
+    }
+  </div>
+</section>

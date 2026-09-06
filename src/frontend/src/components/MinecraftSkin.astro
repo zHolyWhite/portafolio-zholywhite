@@ -1,0 +1,98 @@
+---
+const minecraftUuid = '5fb9c687-7e89-478b-9758-7b3554432b06';
+
+const skinUrl =
+  'https://textures.minecraft.net/texture/cd05893538226388d7d0f251b7597c6f8263a23279050f4cb10910bbb59c8e9e';
+
+const nameMcUrl = `https://namemc.com/profile/${minecraftUuid}`;
+---
+
+<section class="minecraft-skin" aria-labelledby="minecraft-skin-title">
+  <h2
+    id="minecraft-skin-title"
+    class="minecraft-skin__title font-minecraft"
+  >
+    Mi skin de Minecraft
+  </h2>
+
+  <div class="minecraft-skin__viewer">
+    <canvas
+      class="minecraft-skin__canvas"
+      data-minecraft-skin-canvas
+      data-minecraft-skin-url={skinUrl}
+      width="260"
+      height="360"
+      aria-label="Modelo 3D giratorio de la skin de Minecraft de zHolyWhite"
+    ></canvas>
+
+    <span
+      class="minecraft-skin__loading"
+      data-minecraft-skin-loading
+    >
+      Cargando skin...
+    </span>
+  </div>
+
+  <a
+    href={nameMcUrl}
+    target="_blank"
+    rel="noopener noreferrer"
+    class="minecraft-skin__namemc font-manrope"
+  >
+    Ver perfil en NameMC
+  </a>
+</section>
+
+<script>
+  import { IdleAnimation, SkinViewer } from 'skinview3d';
+
+  const canvas = document.querySelector<HTMLCanvasElement>(
+    '[data-minecraft-skin-canvas]',
+  );
+
+  const loading = document.querySelector<HTMLElement>(
+    '[data-minecraft-skin-loading]',
+  );
+
+  if (canvas) {
+    const skinUrl = canvas.dataset.minecraftSkinUrl ?? '';
+
+    const viewer = new SkinViewer({
+      canvas,
+      width: 260,
+      height: 360,
+    });
+
+    viewer.fov = 50;
+    viewer.zoom = 0.8;
+
+    viewer.animation = new IdleAnimation();
+    viewer.animation.speed = 0.65;
+
+    viewer.autoRotate = true;
+    viewer.autoRotateSpeed = 0.8;
+
+    viewer
+      .loadSkin(skinUrl, {
+        model: 'slim',
+      })
+      .then(() => {
+        loading?.remove();
+      })
+      .catch((error) => {
+        console.error('No se pudo cargar la skin:', error);
+
+        if (loading) {
+          loading.textContent = 'No se pudo cargar la skin';
+        }
+      });
+
+    window.addEventListener(
+      'beforeunload',
+      () => {
+        viewer.dispose();
+      },
+      { once: true },
+    );
+  }
+</script>

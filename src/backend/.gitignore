@@ -1,0 +1,44 @@
+# Dependencias
+node_modules/
+
+# Build de TypeScript
+dist/
+build/
+*.tsbuildinfo
+
+# Variables y secretos del servidor
+.env
+.env.*
+!.env.example
+
+# Logs y runtime
+*.log
+logs/
+*.pid
+*.pid.lock
+
+# Cobertura y caches
+coverage/
+.nyc_output/
+.cache/
+.vite/
+
+# Prisma local y artefactos temporales
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Claves, certificados y tokens locales
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+service-account*.json
+
+# Archivos de editor
+.idea/
+.vscode/
+*.swp
+*.swo

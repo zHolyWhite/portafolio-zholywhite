@@ -1,0 +1,29 @@
+{
+  "name": "portafolio2",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev:frontend": "cd src/frontend && npm run dev",
+    "dev:backend": "cd src/backend && npm run dev",
+    "dev": "npm-run-all --parallel dev:frontend dev:backend",
+    "build:frontend": "cd src/frontend && npm run build",
+    "build:backend": "cd src/backend && npm run build",
+    "build": "npm-run-all build:frontend build:backend",
+    "prisma:generate": "cd src/backend && npx prisma generate",
+    "prisma:migrate": "cd src/backend && npx prisma migrate dev",
+    "prisma:studio": "cd src/backend && npx prisma studio",
+    "deploy": "vercel --prod"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "npm-run-all": "^4.1.5",
+    "prisma": "^6.19.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3"
+  }
+}

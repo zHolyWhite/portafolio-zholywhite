@@ -1,0 +1,305 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+import Background from '../components/Background.astro';
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001/graphql';
+---
+
+<MainLayout title="Subir Proyecto | zHolyWhite">
+  <Background />
+
+  <main class="uploader-page">
+    <div class="uploader-container">
+      <h1 class="uploader-title font-minecraft">Subir Nuevo Proyecto</h1>
+      
+      <div id="auth-section">
+        <p class="uploader-info">
+          Para subir proyectos, necesitas un token de autenticación.
+          <br>
+          El token se enviará a tu Discord y solo funcionará desde tu IP.
+        </p>
+        
+        <button id="request-token-btn" class="btn btn-primary">
+          Solicitar Token en Discord
+        </button>
+        
+        <div id="token-status" class="token-status hidden"></div>
+      </div>
+
+      <form id="project-form" class="project-form hidden">
+        <div class="form-section">
+          <h2 class="form-section-title">Información Básica</h2>
+          
+          <div class="form-group">
+            <label for="titulo">Título *</label>
+            <input 
+              type="text" 
+              id="titulo" 
+              name="titulo" 
+              required 
+              placeholder="Ej: Mod RPG Events"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="descripcion">Descripción Corta *</label>
+            <input 
+              type="text" 
+              id="descripcion" 
+              name="descripcion" 
+              required 
+              placeholder="Descripción de 1-2 líneas"
+              maxlength="150"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="descripcionLarga">Descripción Larga</label>
+            <textarea 
+              id="descripcionLarga" 
+              name="descripcionLarga" 
+              rows="4"
+              placeholder="Descripción detallada del proyecto"
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="categoria">Categoría *</label>
+            <select id="categoria" name="categoria" required>
+              <option value="personal">Proyectos Personales</option>
+              <option value="minecraft">Minecraft & Comisiones</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h2 class="form-section-title">Enlaces</h2>
+          
+          <div class="form-group">
+            <label for="github">GitHub</label>
+            <input 
+              type="url" 
+              id="github" 
+              name="github" 
+              placeholder="https://github.com/tu-usuario/proyecto"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="modrinth">Modrinth (opcional)</label>
+            <input 
+              type="url" 
+              id="modrinth" 
+              name="modrinth" 
+              placeholder="https://modrinth.com/mod/tu-mod"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="demo">Demo / Website (opcional)</label>
+            <input 
+              type="url" 
+              id="demo" 
+              name="demo" 
+              placeholder="https://tu-demo.com"
+            />
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h2 class="form-section-title">Tecnologías</h2>
+          
+          <div class="form-group">
+            <label for="stack">Tecnologías (separadas por coma)</label>
+            <input 
+              type="text" 
+              id="stack" 
+              name="stack" 
+              required
+              placeholder="Java, Fabric, GeckoLib"
+            />
+            <small class="form-hint">Ej: Java, Fabric, GeckoLib, AzureLib</small>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h2 class="form-section-title">Multimedia</h2>
+          
+          <div class="form-group">
+            <label for="portada">URL de Portada (opcional)</label>
+            <input 
+              type="url" 
+              id="portada" 
+              name="portada" 
+              placeholder="https://github.com/usuario/proyecto/raw/main/preview.png"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="video">Video de YouTube (opcional)</label>
+            <input 
+              type="text" 
+              id="video" 
+              name="video" 
+              placeholder="VIDEO_ID de YouTube"
+            />
+            <small class="form-hint">Solo el ID del video, Ej: dQw4w9WgXcQ</small>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-group form-group--checkbox">
+            <input 
+              type="checkbox" 
+              id="destacado" 
+              name="destacado"
+            />
+            <label for="destacado">Marcar como destacado</label>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">
+            Subir Proyecto
+          </button>
+          <button type="button" id="cancel-btn" class="btn btn-secondary">
+            Cancelar
+          </button>
+        </div>
+
+        <div id="form-status" class="form-status"></div>
+      </form>
+    </div>
+  </main>
+
+  <script>
+    const API_URL = '{API_URL}';
+    const DISCORD_USER_ID = 'TU_DISCORD_USER_ID_AQUI';
+
+    const authSection = document.getElementById('auth-section')!;
+    const tokenStatus = document.getElementById('token-status')!;
+    const projectForm = document.getElementById('project-form')! as HTMLFormElement;
+    const formStatus = document.getElementById('form-status')!;
+    const requestTokenBtn = document.getElementById('request-token-btn')! as HTMLButtonElement;
+    const cancelBtn = document.getElementById('cancel-btn')! as HTMLButtonElement;
+
+    let currentToken: string | null = null;
+
+    async function graphqlQuery(query: string, variables?: Record<string, any>) {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, variables }),
+      });
+      return await response.json();
+    }
+
+    async function requestToken() {
+      requestTokenBtn.disabled = true;
+      requestTokenBtn.textContent = 'Solicitando...';
+
+      try {
+        const { data, errors } = await graphqlQuery(
+          `mutation { generateUploadToken(discordId: "${DISCORD_USER_ID}", ipAddress: "auto") { token discordId expiresAt } }`
+        );
+
+        if (errors || !data?.generateUploadToken) {
+          throw new Error(errors?.[0]?.message || 'Error al generar token');
+        }
+
+        currentToken = data.generateUploadToken.token;
+        
+        tokenStatus.innerHTML = `
+          <p class="success">
+            Token generado. Revisa tu Discord.
+            <br>
+            <small>Token: ${currentToken ? currentToken.slice(0, 20) + '...' : ''} (expira en 24h)</small>
+          </p>
+        `;
+        tokenStatus.classList.remove('hidden');
+
+        setTimeout(() => {
+          authSection.classList.add('hidden');
+          projectForm.classList.remove('hidden');
+        }, 2000);
+
+      } catch (error) {
+        tokenStatus.innerHTML = `
+          <p class="error">Error: ${(error as Error).message}</p>
+        `;
+        tokenStatus.classList.remove('hidden');
+      } finally {
+        requestTokenBtn.disabled = false;
+        requestTokenBtn.textContent = 'Solicitar Token en Discord';
+      }
+    }
+
+    async function submitProject(formData: FormData) {
+      if (!currentToken) {
+        throw new Error('No hay token valido');
+      }
+
+      const stack = (formData.get('stack') as string)
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s);
+
+      const input = {
+        titulo: formData.get('titulo') as string,
+        descripcion: formData.get('descripcion') as string,
+        descripcionLarga: formData.get('descripcionLarga') as string || null,
+        categoria: formData.get('categoria') as string,
+        github: formData.get('github') as string || null,
+        modrinth: formData.get('modrinth') as string || null,
+        demo: formData.get('demo') as string || null,
+        portada: formData.get('portada') as string || null,
+        video: formData.get('video') as string || null,
+        destacado: formData.get('destacado') === 'on',
+        stack,
+      };
+
+      const { data, errors } = await graphqlQuery(
+        `mutation CreateProject($input: CreateProjectInput!, $token: String!) {
+          createProject(input: $input, token: $token) {
+            id
+            titulo
+          }
+        }`,
+        { input, token: currentToken }
+      );
+
+      if (errors || !data?.createProject) {
+        throw new Error(errors?.[0]?.message || 'Error al crear proyecto');
+      }
+
+      return data.createProject;
+    }
+
+    requestTokenBtn.addEventListener('click', requestToken);
+
+    projectForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData(projectForm);
+      formStatus.innerHTML = '<p class="loading">Subiendo proyecto...</p>';
+
+      try {
+        await submitProject(formData);
+        formStatus.innerHTML = `
+          <p class="success">
+            Proyecto subido exitosamente
+            <br>
+            <a href="/" class="link">Volver al portafolio</a>
+          </p>
+        `;
+        projectForm.reset();
+      } catch (error) {
+        formStatus.innerHTML = `<p class="error">Error: ${(error as Error).message}</p>`;
+      }
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      window.location.href = '/';
+    });
+  </script>
+</MainLayout>
