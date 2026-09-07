@@ -1,8 +1,10 @@
+import 'dotenv/config';
 import { createServer } from './server.js';
 import { startDiscordBot } from './discord/bot.js';
 
 async function start() {
   const discordToken = process.env.DISCORD_BOT_TOKEN;
+
   if (discordToken) {
     try {
       await startDiscordBot(discordToken);
@@ -15,15 +17,19 @@ async function start() {
   }
 
   const app = await createServer();
+  const port = Number(process.env.PORT || 3001);
 
-  const port = process.env.PORT || 3001;
-  app.listen({ port: Number(port) }, (err, address) => {
-    if (err) {
-      console.error(err);
-      process.exit(1);
-    }
-    console.log(`GraphQL server running at ${address}/graphql`);
-  });
+  try {
+    await app.listen({
+      host: '127.0.0.1',
+      port,
+    });
+
+    console.log(`GraphQL server running at http://127.0.0.1:${port}/graphql`);
+  } catch (error) {
+    app.log.error(error);
+    process.exit(1);
+  }
 }
 
-start();
+void start();

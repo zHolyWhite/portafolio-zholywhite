@@ -4,18 +4,27 @@ import { ApolloServer } from '@apollo/server';
 import { typeDefs } from './graphql/schema.js';
 import { resolvers } from './graphql/resolvers.js';
 
+interface GraphQLContext {
+  ipAddress: string;
+}
+
 export async function createServer() {
-  const app = fastify({ 
+  const app = fastify({
     logger: true,
-    trustProxy: true,
+    trustProxy: '127.0.0.1',
   });
 
   await app.register(cors, {
-    origin: '*',
-    methods: ['GET', 'POST', 'OPTIONS'],
+    origin: [
+    'http://localhost:4321',
+    'http://127.0.0.1:4321',
+    'https://zholywhite.me',
+    'https://www.zholywhite.me',
+    ],
+    methods: ['POST', 'OPTIONS'],
   });
 
-  const server = new ApolloServer({
+  const server = new ApolloServer<GraphQLContext>({
     typeDefs,
     resolvers,
   });
@@ -30,12 +39,6 @@ export async function createServer() {
       operationName?: string;
     };
 
-    const ipAddress = 
-      (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
-      (req.headers['x-real-ip'] as string) ||
-      req.ip ||
-      'unknown';
-
     const response = await server.executeOperation(
       {
         query: query || '',
@@ -43,9 +46,10 @@ export async function createServer() {
         operationName,
       },
       {
-        request: req,
-        ipAddress,
-      }
+        contextValue: {
+          ipAddress: req.ip,
+        },
+      },
     );
 
     return reply.send(response.body);
