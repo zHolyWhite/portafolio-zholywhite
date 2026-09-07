@@ -1,3 +1,3 @@
 ﻿# portafolio-zholywhite
 
-Sistema incompleto por ahora (en fase de algunas pruebas)
+ando actualizando la backend tonotos
