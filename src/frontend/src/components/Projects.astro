@@ -8,27 +8,33 @@ import { proyectosPersonales, proyectosMinecraft } from '../data/projects';
     Mis Proyectos
   </h2>
   
-  <!-- Proyectos Personales -->
   <div class="projects__category">
     <h3 class="projects__category-title projects__category-title--blue">
       Proyectos Personales
     </h3>
-    <div class="projects__grid">
-      {proyectosPersonales.map((proyecto) => (
-        <ProjectCard {...proyecto} />
-      ))}
-    </div>
+    {proyectosPersonales.length > 0 ? (
+      <div class="projects__grid">
+        {proyectosPersonales.map((proyecto) => (
+          <ProjectCard {...proyecto} />
+        ))}
+      </div>
+    ) : (
+      <p class="projects__empty">Próximamente...</p>
+    )}
   </div>
   
-  <!-- Proyectos Minecraft & Comisiones -->
   <div class="projects__category">
     <h3 class="projects__category-title projects__category-title--purple">
       Proyectos Minecraft & Comisiones
     </h3>
-    <div class="projects__grid">
-      {proyectosMinecraft.map((proyecto) => (
-        <ProjectCard {...proyecto} />
-      ))}
-    </div>
+    {proyectosMinecraft.length > 0 ? (
+      <div class="projects__grid">
+        {proyectosMinecraft.map((proyecto) => (
+          <ProjectCard {...proyecto} />
+        ))}
+      </div>
+    ) : (
+      <p class="projects__empty">Próximamente...</p>
+    )}
   </div>
 </section>
